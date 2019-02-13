@@ -22,7 +22,7 @@ var cacheFiles = [
 ]
 
 
-self.addEventListener('install', function(event) {
+/**self.addEventListener('install', function(event) {
 	console.log("[Service Worker] Installed");
 
 	event.waitUntil(
@@ -73,4 +73,56 @@ self.addEventListener('fetch', function(event) {
 				console.log("Error fetching and caching new data", error);
 			})
 	)
-})
+})**/
+
+self.addEventListener('install', function(event) {
+	console.log("[Service Worker] Installed");
+
+	event.waitUntil(
+		
+		caches.open(cacheName).then(function(cache) {
+			console.log("Opened cashe");
+			return cache.addAll(cacheFiles);
+		})
+	);
+});
+
+self.addEventListener("fetch", function(event) {
+	event.respondWith(
+		cashes.match(event.request)
+		.then(function(response) {
+			if(response) {
+				return response;
+			}
+			
+			return fetch(event.request).then(
+				function(response) {
+					if(!response || response.status !== 200 || response.type !== "basic") {
+						return response;
+					}
+					
+					var responseToCache = response.clone();
+
+					caches.open(cacheName)
+					.then(function(cache) {
+						cache.put(event.request, responseToCache);
+					});
+
+					return response;
+				});
+		}));
+});
+
+self.addEventListener("activate", function(event) {
+	var cacheWhiteList = ["pages-cache-v1", "blog-posts-cache-v1"];
+
+	event.waitUntil(
+		caches.keys().then(function(cacheNames) {
+			return Promise.all(
+				cacheNames.map(function(cacheName) {
+					if(cacheWhiteList.indexOf(cacheName) === -1) {
+						return caches.delete(cacheName);
+					}
+				}));
+		}));
+});
