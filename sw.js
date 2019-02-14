@@ -89,26 +89,32 @@ self.addEventListener('install', function(event) {
 
 self.addEventListener("fetch", function(event) {
 	event.respondWith(
-		cashes.match(event.request)
+		caches.match(event.request.url)
 		.then(function(response) {
 			if(response) {
 				return response;
 			}
-			
-			return fetch(event.request).then(
+			console.log('not cached ' + event.request.url);
+			return fetch(event.request.url).then(
 				function(response) {
-					if(!response || response.status !== 200 || response.type !== "basic") {
+					if(!response || response.status !== 200 ) {
+						console.log('not caching ', event.request.url);
+						console.log(response.status, response.type);
 						return response;
 					}
 					
 					var responseToCache = response.clone();
-
+					console.log('caching ', event.request.url);
 					caches.open(cacheName)
 					.then(function(cache) {
-						cache.put(event.request, responseToCache);
+						cache.put(event.request.url, responseToCache);
 					});
 
 					return response;
+				})
+				.catch(function(error) {
+					console.log('error fetching ', event.request.url);
+					return '';
 				});
 		}));
 });
